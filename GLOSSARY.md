@@ -68,6 +68,10 @@ _Avoid_: Stamina, cooldown, power meter, charge
 A Swing made while the Recharge Gauge is at 100%.
 _Avoid_: Charged attack, full hit
 
+**Damage Number**:
+The figure that appears briefly over an Enemy or the Hero to show how much Health a blow just took: white over an Enemy, red over the Hero.
+_Avoid_: Hit number, floating text, popup
+
 **Knockback**:
 The shove away from the attacker that a struck Enemy or Hero suffers.
 

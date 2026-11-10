@@ -11,6 +11,13 @@ const MERCY_SECONDS := 1.0
 ## How long the Hero lies Fallen before he Respawns.
 const HERO_FALLEN_SECONDS := 1.5
 
+## A Damage Number: how far above the feet it appears (over an Enemy, and
+## over the taller Hero), how far it drifts upward, and how long it lasts.
+const DAMAGE_NUMBER_HEIGHT := 18.0
+const DAMAGE_NUMBER_HERO_HEIGHT := 34.0
+const DAMAGE_NUMBER_RISE := 12.0
+const DAMAGE_NUMBER_SECONDS := 0.7
+
 ## Loudness of the music, in decibels below full.
 const MUSIC_VOLUME_DB := -18.0
 ## How much higher an empty-gauge Swing sounds than a Full-Strength one.

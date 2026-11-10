@@ -13,6 +13,7 @@ const Health := preload("res://scripts/combat/health.gd")
 const MercyWindow := preload("res://scripts/combat/mercy_window.gd")
 const RechargeGauge := preload("res://scripts/combat/recharge_gauge.gd")
 const Swing := preload("res://scripts/combat/swing.gd")
+const DamageNumber := preload("res://scripts/hud/damage_number.gd")
 
 ## Emitted when his health runs out. Whoever holds him decides the Respawn.
 signal fell
@@ -100,7 +101,10 @@ func take_contact(damage: int, away: Vector2) -> void:
 	if _fallen or _mercy.is_open():
 		return
 	_end_swing()
-	if health.take(damage):
+	var before := health.current
+	var fell_now := health.take(damage)
+	DamageNumber.pop(self, before - health.current, DamageNumber.TAKEN, Tuning.DAMAGE_NUMBER_HERO_HEIGHT)
+	if fell_now:
 		_fall()
 		return
 	_hurt_sound.play()
@@ -195,6 +199,8 @@ func _strike_what_is_in_reach() -> void:
 		if target in _swing_struck or not target.has_method("take_swing"):
 			continue
 		_swing_struck.append(target)
+		if target is Node2D:
+			DamageNumber.pop(target, _swing_damage)
 		target.take_swing(_swing_damage, Facing.VECTORS[facing])
 
 

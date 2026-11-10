@@ -4,6 +4,7 @@ const HERO := preload("res://scenes/hero/hero.tscn")
 const PUFFHOP := preload("res://scenes/enemies/puffhop.tscn")
 const Puffhop := preload("res://scripts/enemies/puffhop.gd")
 const Tuning := preload("res://scripts/tuning.gd")
+const DamageNumber := preload("res://scripts/hud/damage_number.gd")
 const ACTIONS := ["move_left", "move_right", "move_up", "move_down", "swing"]
 
 var runner: SceneTree
@@ -147,6 +148,83 @@ func test_a_swing_from_the_hero_hurts_it() -> void:
 	_finish()
 
 
+func test_a_swing_that_lands_shows_its_damage() -> void:
+	var hero := _spawn_hero(Vector2.ZERO)
+	Input.action_press("move_right")
+	await runner.frames(2)
+	Input.action_release("move_right")
+	var puffhop := _spawn_puffhop(hero.position + Vector2(16, 0))
+	var stood_at: Vector2 = puffhop.position
+	Input.action_press("swing")
+	await runner.frames(12)
+	Input.action_release("swing")
+	var numbers := _numbers_over(puffhop)
+	runner.check_equal(numbers.size(), 1, "one number for the one Swing")
+	if numbers.size() == 1:
+		runner.check_equal(numbers[0].amount, Tuning.FULL_STRENGTH_DAMAGE, "shows the damage done")
+		runner.check(absf(numbers[0].position.x - puffhop.position.x) < 2.0, "stays over the Puffhop as it is knocked away")
+		runner.check(numbers[0].position.y < puffhop.position.y - 10.0, "above it")
+	# The first Swing knocked it out of reach: bring it back for a second.
+	await runner.frames(22)
+	puffhop.position = stood_at
+	Input.action_press("swing")
+	await runner.frames(12)
+	Input.action_release("swing")
+	var amounts := []
+	for number in _numbers_over(puffhop):
+		amounts.append(number.amount)
+		runner.check_equal(number.tint, DamageNumber.DEALT, "damage dealt is shown in white")
+	amounts.sort()
+	runner.check_equal(amounts.size(), 2, "a second number for the second Swing")
+	runner.check(amounts[0] < Tuning.FULL_STRENGTH_DAMAGE, "the weak Swing shows its smaller damage, got %s" % [amounts])
+	await runner.frames(int(Tuning.DAMAGE_NUMBER_SECONDS * 60.0) + 10)
+	runner.check_equal(_numbers_over(puffhop).size(), 0, "numbers clear themselves away")
+	_finish()
+
+
+func test_harm_to_the_hero_shows_as_a_red_number_over_him() -> void:
+	var hero := _spawn_hero(Vector2.ZERO)
+	await runner.frames(2)
+	hero.take_contact(Tuning.PUFFHOP_CONTACT_DAMAGE, Vector2.LEFT)
+	var numbers := _numbers_over(hero)
+	runner.check_equal(numbers.size(), 1, "one number for the one blow")
+	if numbers.size() == 1:
+		runner.check_equal(numbers[0].amount, Tuning.PUFFHOP_CONTACT_DAMAGE, "shows the Health lost")
+		runner.check_equal(numbers[0].tint, DamageNumber.TAKEN, "in red")
+	hero.take_contact(Tuning.PUFFHOP_CONTACT_DAMAGE, Vector2.LEFT)
+	runner.check_equal(_numbers_over(hero).size(), 1, "a blow the Mercy Window turns away shows nothing")
+	await runner.frames(6)
+	numbers = _numbers_over(hero)
+	if numbers.size() == 1:
+		runner.check(absf(numbers[0].position.x - hero.position.x) < 2.0, "stays over him as he is knocked away")
+		runner.check(numbers[0].position.y < hero.position.y - 30.0, "above his head")
+	_finish()
+
+
+func test_the_blow_that_fells_him_shows_only_the_health_he_had_left() -> void:
+	var hero := _spawn_hero(Vector2.ZERO)
+	hero.health.take(Tuning.HERO_HEALTH - 3)
+	hero.take_contact(Tuning.PUFFHOP_CONTACT_DAMAGE, Vector2.LEFT)
+	var numbers := _numbers_over(hero)
+	runner.check_equal(numbers.size(), 1, "the felling blow shows a number")
+	if numbers.size() == 1:
+		runner.check_equal(numbers[0].amount, 3, "the Health actually lost")
+	_finish()
+
+
+func test_a_swing_that_misses_shows_no_number() -> void:
+	var hero := _spawn_hero(Vector2.ZERO)
+	_spawn_puffhop(hero.position + Vector2(0, -60)).bounds = Rect2(-1, -61, 2, 2)
+	Input.action_press("move_down")
+	await runner.frames(2)
+	Input.action_release("move_down")
+	Input.action_press("swing")
+	await runner.frames(20)
+	Input.action_release("swing")
+	runner.check_equal(runner.get_nodes_in_group("damage_number").size(), 0, "nothing struck, nothing shown")
+	_finish()
+
+
 func test_the_hero_falls_when_his_health_runs_out() -> void:
 	var hero := _spawn_hero(Vector2.ZERO)
 	var falls := [0]
@@ -163,6 +241,15 @@ func test_the_hero_falls_when_his_health_runs_out() -> void:
 	hero.take_contact(5, Vector2.RIGHT)
 	runner.check_equal(falls[0], 1, "cannot fall twice")
 	_finish()
+
+
+## The Damage Numbers showing over `who` now.
+func _numbers_over(who: Node2D) -> Array:
+	var found := []
+	for number in runner.get_nodes_in_group("damage_number"):
+		if number.struck == who and not number.is_queued_for_deletion():
+			found.append(number)
+	return found
 
 
 func _world_node() -> Node2D:
